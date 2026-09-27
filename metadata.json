@@ -1,0 +1,6 @@
+{
+  "name": "AI Student Skill-Gap Analyzer",
+  "description": "Discover your skill gaps, analyze career readiness against industry roles, and build personalized roadmaps with AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
