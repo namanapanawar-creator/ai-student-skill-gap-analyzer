@@ -6,20 +6,10 @@ import {
   StudentSkill,
   User
 } from '../types';
-import { generateSkillAnalysis } from '../utils/analyzer';
 
 const STORAGE_KEY_PROFILE = 'aiskill_student_profile';
 const STORAGE_KEY_PROGRESS = 'aiskill_progress_state';
-const STORAGE_KEY_REPORTS = 'aiskill_saved_reports';
 const STORAGE_KEY_THEME = 'aiskill_theme';
-const STORAGE_KEY_ACTIVE_USER = 'aiskill_active_user';
-const STORAGE_KEY_USERS_DB = 'aiskill_registered_users_db';
-
-export interface StoredAccount {
-  user: User;
-  passwordHash: string; // Plain/demo hash
-  profile: StudentProfile;
-}
 
 export function isProfileComplete(profile: StudentProfile | null | undefined): boolean {
   if (!profile) return false;
@@ -30,20 +20,22 @@ export function isProfileComplete(profile: StudentProfile | null | undefined): b
     Boolean(profile.currentYear && profile.currentYear.trim().length > 0) &&
     Boolean(profile.targetRoleId && profile.targetRoleId.trim().length > 0) &&
     Array.isArray(profile.skills) &&
-    profile.skills.length >= 3
+    profile.skills.length >= 1
   );
 }
 
-export function createBlankProfile(user: User): StudentProfile {
+export function getBlankProfile(): StudentProfile {
   return {
-    id: `profile-${user.id}`,
-    userId: user.id,
-    fullName: user.fullName,
-    email: user.email,
-    degree: '',
+    id: `profile-${Date.now()}`,
+    userId: 'student-local',
+    fullName: '',
+    email: '',
+    degree: 'B.Tech in Computer Science',
     branch: '',
-    currentYear: '',
-    targetRoleId: '',
+    currentYear: '3rd Year / 5th-6th Semester',
+    targetRoleId: 'software-developer',
+    githubUrl: '',
+    portfolioUrl: '',
     skills: [],
     projects: [],
     certifications: [],
@@ -53,119 +45,11 @@ export function createBlankProfile(user: User): StudentProfile {
   };
 }
 
-export function getInitialAccounts(): StoredAccount[] {
-  const alexProfile = getDefaultProfile();
-  const alexUser: User = {
-    id: 'user-alex',
-    email: 'alex.rivera@university.edu',
-    fullName: 'Alex Rivera',
-    createdAt: '2025-01-15T08:00:00.000Z'
-  };
-
-  const priyaSample = SAMPLE_STUDENTS[1];
-  const priyaUser: User = {
-    id: 'user-priya',
-    email: 'priya.sharma@university.edu',
-    fullName: priyaSample.name,
-    createdAt: '2025-02-10T08:00:00.000Z'
-  };
-  const priyaProfile: StudentProfile = {
-    id: 'profile-priya',
-    userId: 'user-priya',
-    fullName: priyaSample.name,
-    email: 'priya.sharma@university.edu',
-    degree: priyaSample.degree,
-    branch: priyaSample.branch,
-    currentYear: priyaSample.year,
-    targetRoleId: priyaSample.roleId,
-    skills: priyaSample.skills.map((s, idx) => {
-      const meta = ALL_SKILLS.find((sk) => sk.id === s.skillId);
-      return {
-        id: `priya-sk-${idx}`,
-        skillId: s.skillId,
-        skillName: meta ? meta.name : s.skillId,
-        category: meta ? meta.category : 'Data & AI',
-        selfProficiencyLevel: s.level,
-        proficiencyScore: s.score
-      };
-    }),
-    projects: priyaSample.projects.map((p, idx) => ({
-      id: `priya-p-${idx}`,
-      title: p.title,
-      description: p.desc,
-      techStack: p.tech,
-      difficulty: p.diff
-    })),
-    certifications: priyaSample.certs.map((c, idx) => ({
-      id: `priya-c-${idx}`,
-      name: c.name,
-      issuingOrganization: c.org,
-      issueYear: c.year
-    })),
-    internships: [],
-    updatedAt: new Date().toISOString()
-  };
-
-  const newStudentUser: User = {
-    id: 'user-newbie',
-    email: 'newstudent@university.edu',
-    fullName: 'Jordan Taylor',
-    createdAt: new Date().toISOString()
-  };
-  const newStudentProfile = createBlankProfile(newStudentUser);
-
-  return [
-    { user: alexUser, passwordHash: 'password123', profile: alexProfile },
-    { user: priyaUser, passwordHash: 'password123', profile: priyaProfile },
-    { user: newStudentUser, passwordHash: 'password123', profile: newStudentProfile }
-  ];
-}
-
-export function loadStoredAccounts(): StoredAccount[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_USERS_DB);
-    if (raw) {
-      return JSON.parse(raw);
-    }
-  } catch (e) {}
-  const initial = getInitialAccounts();
-  saveStoredAccounts(initial);
-  return initial;
-}
-
-export function saveStoredAccounts(accounts: StoredAccount[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(accounts));
-  } catch (e) {}
-}
-
-export function loadActiveUser(): User | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_ACTIVE_USER);
-    if (raw) {
-      return JSON.parse(raw);
-    }
-  } catch (e) {}
-  // Default to logged-in Alex Rivera for instant seamless demo, but user can log out
-  const accounts = loadStoredAccounts();
-  return accounts[0].user;
-}
-
-export function saveActiveUser(user: User | null): void {
-  try {
-    if (user) {
-      localStorage.setItem(STORAGE_KEY_ACTIVE_USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEY_ACTIVE_USER);
-    }
-  } catch (e) {}
-}
-
 export function getDefaultProfile(): StudentProfile {
   const sample = SAMPLE_STUDENTS[0]; // Alex Rivera by default
   return {
     id: 'profile-alex-001',
-    userId: 'user-001',
+    userId: 'student-local',
     fullName: sample.name,
     email: 'alex.rivera@university.edu',
     degree: sample.degree,
@@ -265,18 +149,13 @@ export function saveStoredTheme(theme: 'light' | 'dark'): void {
 }
 
 export function exportSqlDump(profile: StudentProfile, report: AnalysisReport): string {
-  const sanitize = (str: string) => str.replace(/'/g, "''");
+  const sanitize = (str: string) => (str ? str.replace(/'/g, "''") : '');
   
   const sql = `-- AI Student Skill-Gap Analyzer: Exported Relational Dump
 -- Target Role: ${profile.targetRoleId}
 -- Date: ${new Date().toISOString()}
 
 BEGIN;
-
--- Insert User
-INSERT INTO users (id, email, full_name)
-VALUES ('${profile.userId}', '${sanitize(profile.email)}', '${sanitize(profile.fullName)}')
-ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name;
 
 -- Insert Student Profile
 INSERT INTO student_profiles (id, user_id, degree, branch, current_year, target_role_id, readiness_score)

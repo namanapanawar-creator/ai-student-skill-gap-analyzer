@@ -1,19 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   MessageSquareCode,
   Send,
   Sparkles,
   Bot,
   User,
-  Loader2,
   RefreshCw,
   Lightbulb,
   Copy,
   Check,
-  Code2,
   ChevronRight,
   Terminal,
-  ArrowRight
+  Trash2
 } from 'lucide-react';
 import { AnalysisReport, ChatMessage, StudentProfile } from '../types';
 
@@ -41,7 +40,6 @@ const FormattedMessage: React.FC<{ content: string }> = ({ content }) => {
   };
 
   const renderInlineStyles = (text: string) => {
-    // Bold matching
     const segments = text.split(/(\*\*.*?\*\*|`.*?`)/g);
     return segments.map((seg, i) => {
       if (seg.startsWith('**') && seg.endsWith('**')) {
@@ -193,17 +191,18 @@ export const AiCareerAssistantPage: React.FC<AiCareerAssistantPageProps> = ({
 }) => {
   const topGaps = report.criticalGaps.slice(0, 3).map((g) => g.skillName);
 
-  const initialWelcomeText = `### 👋 Welcome ${profile.fullName.split(' ')[0]}! I'm your AI Career Coach.
+  const initialWelcomeText = `### 👋 Welcome ${profile.fullName ? profile.fullName.split(' ')[0] : 'Student'}! I'm your AI Career Coach.
 
 I've evaluated your skills, projects, and coursework against industry hiring standards for **${report.roleTitle}**.
 
-### Your Snapshot:
-- **Career Readiness Score**: **${report.readinessScore}/100**
-- **Critical Skill Gaps**: **${topGaps.join(', ') || 'DSA, Databases, Systems'}**
-- **Status**: ${
+### Your Career Snapshot:
+- **Target Role**: **${report.roleTitle}**
+- **Overall Readiness**: **${report.readinessScore}/100**
+- **Critical Skill Gaps**: **${topGaps.join(', ') || 'Core role proficiencies'}**
+- **Evaluation**: ${
     report.readinessScore >= 70
-      ? 'Strong interview candidate foundation. Time to refine projects and practice mock tests.'
-      : 'Active preparation phase. Focus on closing the 1st critical gap.'
+      ? 'Strong interview candidate foundation. Time to refine projects and practice mock technical rounds.'
+      : 'Active preparation phase. Focus on closing your #1 critical gap to unlock interview eligibility.'
   }
 
 Ask me anything about study schedules, project blueprints, coding interview preparation, or resume optimization!`;
@@ -215,10 +214,10 @@ Ask me anything about study schedules, project blueprints, coding interview prep
       text: initialWelcomeText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       suggestedFollowUps: [
-        'What should I learn next?',
-        'How can I improve my Python?',
-        'Suggest a portfolio project',
-        'Am I ready for an internship?'
+        'What skills should I learn next?',
+        'How can I improve my readiness score?',
+        'Suggest projects for my career',
+        'Create a 30-day learning plan'
       ]
     }
   ]);
@@ -229,12 +228,14 @@ Ask me anything about study schedules, project blueprints, coding interview prep
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Exact 6 core prompts from requirements
   const quickPrompts = [
-    'What should I learn next?',
-    'How can I improve my Python?',
-    'Suggest a cybersecurity project.',
-    'Am I ready for a software developer internship?',
-    'Create a 30-day study plan.'
+    'What skills should I learn next?',
+    'How can I improve my readiness score?',
+    'Suggest projects for my career',
+    'Create a 30-day learning plan',
+    'Analyze my biggest skill gaps',
+    'How can I improve my resume?'
   ];
 
   const scrollToBottom = () => {
@@ -249,6 +250,23 @@ Ask me anything about study schedules, project blueprints, coding interview prep
     navigator.clipboard.writeText(text);
     setCopiedMsgId(msgId);
     setTimeout(() => setCopiedMsgId(null), 2000);
+  };
+
+  const handleClearChat = () => {
+    setMessages([
+      {
+        id: `welcome-${Date.now()}`,
+        sender: 'assistant',
+        text: initialWelcomeText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        suggestedFollowUps: [
+          'What skills should I learn next?',
+          'How can I improve my readiness score?',
+          'Suggest projects for my career',
+          'Create a 30-day learning plan'
+        ]
+      }
+    ]);
   };
 
   const handleSendMessage = async (textToSend?: string) => {
@@ -293,9 +311,9 @@ Ask me anything about study schedules, project blueprints, coding interview prep
           text: data.reply || 'I am ready to assist with your next career milestone.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           suggestedFollowUps: data.suggestedFollowUps || [
-            'What should I learn next?',
-            'Suggest a portfolio project',
-            'Am I ready for an internship?'
+            'What skills should I learn next?',
+            'Suggest projects for my career',
+            'How can I improve my resume?'
           ],
           aiPowered: data.aiPowered
         };
@@ -303,27 +321,28 @@ Ask me anything about study schedules, project blueprints, coding interview prep
       } else {
         throw new Error('Server responded with error');
       }
-    } catch (err) {
-      // Local fallback response
+    } catch {
+      // Local fallback response tailored to student profile
+      const firstGap = topGaps[0] || 'Core Technical Foundations';
       const fallbackMsg: MessageExtended = {
         id: `fallback-${Date.now()}`,
         sender: 'assistant',
         text: `### 🎯 Targeted Advice for ${report.roleTitle}
 
-Based on your current readiness score of **${report.readinessScore}%**, your highest leverage is dedicating time to: **${topGaps.join(', ')}**.
+Based on your current readiness score of **${report.readinessScore}%**, your highest leverage is dedicating time to: **${firstGap}**.
 
 ### Action Steps:
 1. **Daily Practice**: Spend 60 minutes writing clean code rather than reading passive articles.
-2. **Close Gaps in Roadmap**: Check your **Learning Roadmap** tab to follow the Week 1–2 curriculum.
+2. **Close Gaps in Roadmap**: Check your **Learning Roadmap** tab to follow the Phase 1 curriculum.
 3. **Build to Showcase**: Start a GitHub project validating your problem-solving and systems understanding.
 
 ### 🎯 Next Immediate Action
 Commit one working algorithm or project module to your repository today.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         suggestedFollowUps: [
-          'Create a 30-day study plan',
-          'Suggest a portfolio project',
-          'What questions will recruiters ask?'
+          'Create a 30-day learning plan',
+          'Suggest projects for my career',
+          'How can I improve my resume?'
         ]
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -349,47 +368,32 @@ Commit one working algorithm or project module to your repository today.`,
             <span>AI Career Assistant & Mentor</span>
           </h1>
           <p className="text-xs text-slate-500">
-            Clear, grounded advice tailored for <strong>{report.roleTitle}</strong> ({report.readinessScore}% Readiness).
+            Personalized guidance grounded in your <strong>{report.roleTitle}</strong> analysis ({report.readinessScore}% Readiness).
           </p>
         </div>
 
         <button
-          onClick={() =>
-            setMessages([
-              {
-                id: `welcome-${Date.now()}`,
-                sender: 'assistant',
-                text: initialWelcomeText,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                suggestedFollowUps: [
-                  'What should I learn next?',
-                  'How can I improve my Python?',
-                  'Suggest a portfolio project',
-                  'Am I ready for an internship?'
-                ]
-              }
-            ])
-          }
-          className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          title="Reset conversation"
+          onClick={handleClearChat}
+          className="text-xs font-semibold text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors shadow-2xs"
+          title="Clear chat and start fresh"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">New Chat</span>
+          <Trash2 className="w-3.5 h-3.5" />
+          <span>Clear Chat</span>
         </button>
       </div>
 
       {/* Suggested Quick Prompts Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 shrink-0 scrollbar-none">
         <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap flex items-center gap-1">
           <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-          Starter Prompts:
+          Suggested:
         </span>
         {quickPrompts.map((prompt) => (
           <button
             key={prompt}
             onClick={() => handleSendMessage(prompt)}
             disabled={loading}
-            className="text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-500 text-slate-700 dark:text-slate-300 whitespace-nowrap transition-colors shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+            className="text-xs px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-500 text-slate-700 dark:text-slate-300 whitespace-nowrap transition-all shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 hover:-translate-y-0.5"
           >
             {prompt}
           </button>
@@ -398,122 +402,137 @@ Commit one working algorithm or project module to your repository today.`,
 
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 space-y-6">
-        {messages.map((msg) => {
-          const isUser = msg.sender === 'user';
+        <AnimatePresence initial={false}>
+          {messages.map((msg) => {
+            const isUser = msg.sender === 'user';
 
-          return (
-            <div
-              key={msg.id}
-              className={`flex items-start gap-3 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''}`}
-            >
-              {/* Avatar */}
-              <div
-                className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
-                  isUser
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gradient-to-tr from-emerald-500 via-indigo-600 to-blue-600 text-white'
-                }`}
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.2 }}
+                className={`flex items-start gap-3 sm:gap-4 ${isUser ? 'flex-row-reverse' : ''}`}
               >
-                {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-              </div>
-
-              {/* Message Bubble Container */}
-              <div
-                className={`max-w-[90%] sm:max-w-[80%] space-y-2 ${
-                  isUser ? 'items-end' : 'items-start'
-                }`}
-              >
+                {/* Avatar */}
                 <div
-                  className={`p-4 sm:p-5 rounded-3xl shadow-xs transition-all ${
+                  className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
                     isUser
-                      ? 'bg-blue-600 text-white rounded-tr-xs'
-                      : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-tl-xs'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gradient-to-tr from-emerald-500 via-indigo-600 to-blue-600 text-white'
                   }`}
                 >
-                  {isUser ? (
-                    <div className="text-xs sm:text-sm whitespace-pre-line leading-relaxed">
-                      {msg.text}
-                    </div>
-                  ) : (
-                    <FormattedMessage content={msg.text} />
-                  )}
-
-                  {/* Bubble Footer */}
-                  <div
-                    className={`flex items-center justify-between gap-3 mt-3 pt-2 text-[10px] ${
-                      isUser
-                        ? 'text-blue-200 border-t border-blue-500/50'
-                        : 'text-slate-400 border-t border-slate-100 dark:border-slate-800'
-                    }`}
-                  >
-                    <span>
-                      {isUser
-                        ? 'You'
-                        : msg.aiPowered
-                        ? 'AI Mentor (Gemini 3.8 Flash)'
-                        : 'Career Intelligence Engine'}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {!isUser && (
-                        <button
-                          type="button"
-                          onClick={() => handleCopyMessage(msg.id, msg.text)}
-                          className="hover:text-slate-700 dark:hover:text-slate-200 flex items-center gap-1 transition-colors"
-                          title="Copy advice to clipboard"
-                        >
-                          {copiedMsgId === msg.id ? (
-                            <>
-                              <Check className="w-3 h-3 text-emerald-500" />
-                              <span className="text-emerald-500 font-semibold">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                      <span>{msg.timestamp}</span>
-                    </div>
-                  </div>
+                  {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
 
-                {/* Contextual Follow-up Chips for Assistant Messages */}
-                {!isUser && msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-1 pl-1">
-                    <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1 mr-1">
-                      <ChevronRight className="w-3 h-3 text-blue-500" />
-                      Follow up:
-                    </span>
-                    {msg.suggestedFollowUps.map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => handleSendMessage(q)}
-                        disabled={loading}
-                        className="text-[11px] px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-300 transition-colors shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:opacity-50"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                {/* Message Bubble Container */}
+                <div
+                  className={`max-w-[90%] sm:max-w-[80%] space-y-2 ${
+                    isUser ? 'items-end' : 'items-start'
+                  }`}
+                >
+                  <div
+                    className={`p-4 sm:p-5 rounded-3xl shadow-xs transition-all ${
+                      isUser
+                        ? 'bg-blue-600 text-white rounded-tr-xs'
+                        : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-tl-xs'
+                    }`}
+                  >
+                    {isUser ? (
+                      <div className="text-xs sm:text-sm whitespace-pre-line leading-relaxed">
+                        {msg.text}
+                      </div>
+                    ) : (
+                      <FormattedMessage content={msg.text} />
+                    )}
 
-        {/* Loading Indicator */}
+                    {/* Bubble Footer */}
+                    <div
+                      className={`flex items-center justify-between gap-3 mt-3 pt-2 text-[10px] ${
+                        isUser
+                          ? 'text-blue-200 border-t border-blue-500/50'
+                          : 'text-slate-400 border-t border-slate-100 dark:border-slate-800'
+                      }`}
+                    >
+                      <span>
+                        {isUser
+                          ? 'You'
+                          : msg.aiPowered
+                          ? 'AI Mentor (Gemini 3.8 Flash)'
+                          : 'Career Intelligence Engine'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {!isUser && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyMessage(msg.id, msg.text)}
+                            className="hover:text-slate-700 dark:hover:text-slate-200 flex items-center gap-1 transition-colors"
+                            title="Copy advice to clipboard"
+                          >
+                            {copiedMsgId === msg.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-500" />
+                                <span className="text-emerald-500 font-semibold">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        <span>{msg.timestamp}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contextual Follow-up Chips for Assistant Messages */}
+                  {!isUser && msg.suggestedFollowUps && msg.suggestedFollowUps.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1 pl-1">
+                      <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1 mr-1">
+                        <ChevronRight className="w-3 h-3 text-blue-500" />
+                        Follow up:
+                      </span>
+                      {msg.suggestedFollowUps.map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => handleSendMessage(q)}
+                          disabled={loading}
+                          className="text-[11px] px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 text-slate-700 dark:text-slate-300 transition-all shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800/80 disabled:opacity-50"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+
+        {/* Typing Indicator with Bouncing Dots */}
         {loading && (
-          <div className="flex items-start gap-3 sm:gap-4">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3 sm:gap-4"
+          >
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-emerald-500 via-indigo-600 to-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
               <Bot className="w-4 h-4" />
             </div>
-            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-tl-xs shadow-xs text-xs text-slate-500 flex items-center gap-3">
-              <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-              <span>Analyzing student profile & formulating structured action plan...</span>
+            <div className="p-4 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-tl-xs shadow-xs text-xs text-slate-600 dark:text-slate-300 flex items-center gap-3">
+              <div className="flex items-center gap-1.5 py-1">
+                <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <span className="text-slate-500 dark:text-slate-400">
+                AI Coach is analyzing your {report.roleTitle} skill profile...
+              </span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />
@@ -525,7 +544,7 @@ Commit one working algorithm or project module to your repository today.`,
           e.preventDefault();
           handleSendMessage();
         }}
-        className="p-2 sm:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex items-end gap-2 shrink-0 focus-within:ring-2 focus-within:ring-blue-500/50"
+        className="p-2 sm:p-2.5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md flex items-end gap-2 shrink-0 focus-within:ring-2 focus-within:ring-blue-500/50 transition-all"
       >
         <textarea
           ref={textareaRef}
@@ -533,7 +552,7 @@ Commit one working algorithm or project module to your repository today.`,
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Ask about ${report.roleTitle} preparation, projects, or study plans... (Enter to send)`}
+          placeholder={`Ask about ${report.roleTitle} prep, projects, or study plans... (Enter to send)`}
           disabled={loading}
           className="flex-1 px-3 py-2 text-xs sm:text-sm bg-transparent border-none text-slate-900 dark:text-white focus:outline-none resize-none max-h-32 min-h-6 leading-relaxed"
         />
@@ -541,7 +560,7 @@ Commit one working algorithm or project module to your repository today.`,
         <button
           type="submit"
           disabled={loading || !inputText.trim()}
-          className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-40 shadow-xs shrink-0"
+          className="px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all disabled:opacity-40 shadow-xs shrink-0 cursor-pointer"
         >
           <Send className="w-4 h-4" />
           <span className="hidden sm:inline">Ask AI</span>

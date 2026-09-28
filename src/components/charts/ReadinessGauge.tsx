@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface ReadinessGaugeProps {
   score: number; // 0-100
@@ -6,31 +6,55 @@ interface ReadinessGaugeProps {
 }
 
 export const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, size = 180 }) => {
+  const [displayScore, setDisplayScore] = useState<number>(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    const duration = 900; // ms
+    const startVal = displayScore;
+    const targetVal = score;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayScore(Math.round(startVal + (targetVal - startVal) * eased));
+
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      }
+    };
+
+    const animId = window.requestAnimationFrame(step);
+    return () => window.cancelAnimationFrame(animId);
+  }, [score]);
+
   const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   // Arc over 260 degrees (leaving bottom open)
   const arcLength = circumference * 0.75;
-  const progressLength = (score / 100) * arcLength;
+  const progressLength = (displayScore / 100) * arcLength;
   const dashOffset = arcLength - progressLength;
 
   // Determine tier and color
   let color = '#ef4444'; // Red
   let tierLabel = 'Early Preparation';
-  let tierBg = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+  let tierBg = 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20';
 
-  if (score >= 80) {
+  if (displayScore >= 80) {
     color = '#10b981'; // Emerald
     tierLabel = 'Job & Internship Ready';
-    tierBg = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-  } else if (score >= 65) {
+    tierBg = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+  } else if (displayScore >= 65) {
     color = '#3b82f6'; // Blue
     tierLabel = 'Interview Ready Candidate';
-    tierBg = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-  } else if (score >= 45) {
+    tierBg = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+  } else if (displayScore >= 45) {
     color = '#f59e0b'; // Amber
     tierLabel = 'Developing Competence';
-    tierBg = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    tierBg = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
   }
 
   return (
@@ -65,14 +89,17 @@ export const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, size = 18
             strokeDasharray={`${arcLength} ${circumference}`}
             strokeDashoffset={dashOffset}
             strokeLinecap="round"
-            className="transition-all duration-1000 ease-out"
+            className="transition-all duration-300 ease-out"
+            style={{
+              filter: `drop-shadow(0 0 6px ${color}40)`
+            }}
           />
         </svg>
 
         {/* Center Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
-          <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {score}<span className="text-xl font-normal text-slate-400 dark:text-slate-500">%</span>
+          <div className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white tabular-nums">
+            {displayScore}<span className="text-xl font-normal text-slate-400 dark:text-slate-500">%</span>
           </div>
           <span className="text-xs uppercase tracking-wider font-semibold text-slate-500 dark:text-slate-400">
             Readiness
@@ -80,7 +107,7 @@ export const ReadinessGauge: React.FC<ReadinessGaugeProps> = ({ score, size = 18
         </div>
       </div>
 
-      <div className={`mt-1 text-xs px-2.5 py-1 rounded-full border font-medium ${tierBg}`}>
+      <div className={`mt-1 text-xs px-3 py-1 rounded-full border font-semibold ${tierBg} transition-all`}>
         {tierLabel}
       </div>
     </div>

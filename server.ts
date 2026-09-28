@@ -317,6 +317,90 @@ Block out a recurring 90-minute study window on your calendar for tomorrow morni
         'How should I structure my GitHub repository?',
         'What coding problems should I practice?'
       ];
+    } else if (lower.includes('readiness score') || lower.includes('improve my readiness') || lower.includes('boost score')) {
+      reply = `### 📈 How to Increase Your Career Readiness Score from **${score}% to 85%+**
+
+Your overall readiness score is computed using a multi-factor formula that mirrors technical recruitment rubrics:
+
+### 1. Close Top Critical Gaps (+15 to +25 pts)
+- Critical skills like **${firstGap}** carry high weight in ${currentRole} benchmarking.
+- Raising a skill from Beginner (40) to Intermediate (65) or Advanced (90) directly lifts your core skill baseline.
+- **Action**: Check your **Progress Tracker** and mark milestones as you practice.
+
+### 2. Add Practical Portfolio Projects (+5 pts each, up to +15 pts)
+- You currently have **${profile?.projects?.length || 0} project(s)** logged.
+- Projects with a clear architecture, live deployment URL, and automated tests give immediate credibility.
+- **Action**: Navigate to **Recommended Projects** and choose a project that utilizes **${firstGap}**.
+
+### 3. Industry Certifications (+3 pts each, up to +10 pts)
+- Certifications validate standardized competence (e.g. AWS Cloud Practitioner, CompTIA Security+, Google Data Analytics).
+- You currently have **${profile?.certifications?.length || 0} certification(s)**.
+
+### 4. Internship / Practical Experience (+5 pts)
+- Even open-source contributions or campus tech team roles boost your profile score.
+
+### 🎯 Next Immediate Action
+Pick 1 critical skill in your **Learning Roadmap** (Phase 1) and complete its practical verification task today to raise your score!`;
+
+      followUps = [
+        'Analyze my biggest skill gaps',
+        'Suggest projects for my career',
+        'Create a 30-day learning plan'
+      ];
+    } else if (lower.includes('biggest') || lower.includes('skill gaps') || lower.includes('analyze my biggest')) {
+      reply = `### 🔍 In-Depth Breakdown of Your Skill Gaps for **${currentRole}**
+
+Here is your prioritized gap matrix comparing your self-assessment against industry hiring benchmarks:
+
+### 🚨 Critical Gaps (Immediate Hiring Blockers)
+- **Top Priority**: **${firstGap}**
+- **Impact**: Recruiters screen for this in initial technical evaluations.
+- **Recommendation**: Dedicate 60% of your current study hours directly to this competency.
+
+### ⚠️ Moderate Gaps (Secondary Polish)
+- Areas where you have foundational familiarity but need deeper hands-on project exposure.
+- **Focus**: Integrating these skills into a unified capstone project rather than studying them in isolation.
+
+### ✅ Your Core Strengths
+- Build confidence around the skills where you scored 70%+.
+- In interview screens, lead with projects that leverage these strengths while demonstrating your active learning roadmap.
+
+### 🎯 Next Immediate Action
+Navigate to the **Skill Gap Report** tab to review the exact required vs current proficiency breakdown across all categories.`;
+
+      followUps = [
+        'What skills should I learn next?',
+        'How can I improve my readiness score?',
+        'Create a 30-day learning plan'
+      ];
+    } else if (lower.includes('resume') || lower.includes('improve my resume') || lower.includes('ats')) {
+      reply = `### 📄 Resume Optimization Playbook for **${currentRole}**
+
+Hiring managers spend an average of 6–10 seconds reviewing college student resumes. Here is how to make yours stand out:
+
+### 1. The High-Impact Bullet Point Formula
+Convert task descriptions into achievement statements:
+- ❌ *Weak*: "Worked on a web project using Python and SQL."
+- ✅ *Strong*: *"Architected a RESTful API in Python (FastAPI) and PostgreSQL, handling 1,500+ daily requests with automated unit tests and CI/CD."*
+
+### 2. ATS Technical Keywords to Ensure Are Present
+For **${currentRole}**, your resume must explicitly contain:
+- Core Languages & Tools: **${gapsList}**
+- Concepts: Testing, Git/GitHub, CI/CD, Containerization, Systems Design
+
+### 3. Structural Essentials
+- Keep to **1 clean page**.
+- Put **Technical Skills** near the top (Languages, Frameworks, Developer Tools, Databases).
+- Include clickable hyperlinks to your **GitHub** and **Live Demo** deployments.
+
+### 🎯 Next Immediate Action
+Open the **Resume Analysis** tab in the sidebar, paste your current resume text, and run the automated ATS keyword matcher!`;
+
+      followUps = [
+        'How can I improve my readiness score?',
+        'Suggest projects for my career',
+        'Create a 30-day learning plan'
+      ];
     } else {
       reply = `### 👋 Welcome to your Career Coaching Session!
 

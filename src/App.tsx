@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LandingPage } from './pages/LandingPage';
-import { AuthPage } from './pages/AuthPage';
 import { StudentProfilePage } from './pages/StudentProfilePage';
 import { CareerSelectionPage } from './pages/CareerSelectionPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -21,17 +21,14 @@ import {
   saveStoredProgress,
   loadStoredTheme,
   saveStoredTheme,
-  loadActiveUser,
-  saveActiveUser,
   isProfileComplete
 } from './db/store';
 import { generateSkillAnalysis } from './utils/analyzer';
 import { SAMPLE_STUDENTS, ALL_SKILLS } from './data/rolesData';
-import { ProgressStatus, StudentProfile, User } from './types';
+import { ProgressStatus, StudentProfile } from './types';
 
 export default function App() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => loadStoredTheme());
-  const [currentUser, setCurrentUser] = useState<User | null>(() => loadActiveUser());
   const [profile, setProfile] = useState<StudentProfile>(() => loadStoredProfile());
   const [progressState, setProgressState] = useState<Record<string, ProgressStatus>>(() =>
     loadStoredProgress()
@@ -71,29 +68,8 @@ export default function App() {
     saveStoredProgress(updated);
   };
 
-  const handleAuthSuccess = (
-    user: User,
-    authenticatedProfile: StudentProfile,
-    destination: 'dashboard' | 'profile'
-  ) => {
-    setCurrentUser(user);
-    setProfile(authenticatedProfile);
-    saveActiveUser(user);
-    saveStoredProfile(authenticatedProfile);
-    setIsOnboarding(destination === 'profile');
-    setCurrentPage(destination);
-  };
-
-  const handleLogout = () => {
-    saveActiveUser(null);
-    setCurrentUser(null);
-    setCurrentPage('auth');
-  };
-
   const handleStartAnalysis = () => {
-    if (!currentUser) {
-      setCurrentPage('auth');
-    } else if (!isProfileComplete(profile)) {
+    if (!isProfileComplete(profile)) {
       setIsOnboarding(true);
       setCurrentPage('profile');
     } else {
@@ -103,18 +79,12 @@ export default function App() {
 
   const handleLoadSample = (sampleId: string) => {
     const sample = SAMPLE_STUDENTS.find((s) => s.id === sampleId) || SAMPLE_STUDENTS[0];
-    const newUser: User = {
-      id: `user-${sample.id}`,
-      email: `${sample.name.toLowerCase().replace(' ', '.')}@university.edu`,
-      fullName: sample.name,
-      createdAt: '2025-01-15T08:00:00.000Z'
-    };
 
     const newProfile: StudentProfile = {
       id: `profile-${sample.id}`,
-      userId: newUser.id,
+      userId: `user-${sample.id}`,
       fullName: sample.name,
-      email: newUser.email,
+      email: `${sample.name.toLowerCase().replace(' ', '.')}@university.edu`,
       degree: sample.degree,
       branch: sample.branch,
       currentYear: sample.year,
@@ -156,8 +126,6 @@ export default function App() {
       updatedAt: new Date().toISOString()
     };
 
-    setCurrentUser(newUser);
-    saveActiveUser(newUser);
     setProfile(newProfile);
     saveStoredProfile(newProfile);
     setIsOnboarding(false);
@@ -180,14 +148,12 @@ export default function App() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         currentProfile={profile}
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        onOpenAuth={() => setCurrentPage('auth')}
         onLoadSample={handleLoadSample}
         report={report}
         onOpenMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         mobileMenuOpen={mobileMenuOpen}
         onNavigate={setCurrentPage}
+        currentPage={currentPage}
       />
 
       {/* Main Layout Area */}
@@ -197,9 +163,6 @@ export default function App() {
           currentPage={currentPage}
           onNavigate={setCurrentPage}
           profile={profile}
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onOpenAuth={() => setCurrentPage('auth')}
           report={report}
           isOpen={mobileMenuOpen}
           onClose={() => setMobileMenuOpen(false)}
@@ -208,108 +171,114 @@ export default function App() {
         {/* Content Pane */}
         <main className="flex-1 lg:pl-64 w-full min-w-0">
           <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-            {currentPage === 'landing' && (
-              <LandingPage
-                onStart={handleStartAnalysis}
-                onSelectRole={handleSelectRole}
-                onLoadSample={handleLoadSample}
-                onOpenAuth={() => setCurrentPage('auth')}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPage}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+              >
+                {currentPage === 'landing' && (
+                  <LandingPage
+                    onStart={handleStartAnalysis}
+                    onSelectRole={handleSelectRole}
+                    onLoadSample={handleLoadSample}
+                    onNavigateToProfile={() => {
+                      setIsOnboarding(true);
+                      setCurrentPage('profile');
+                    }}
+                  />
+                )}
 
-            {currentPage === 'auth' && (
-              <AuthPage
-                onAuthSuccess={handleAuthSuccess}
-                onBackToLanding={() => setCurrentPage('landing')}
-              />
-            )}
+                {currentPage === 'profile' && (
+                  <StudentProfilePage
+                    profile={profile}
+                    onSaveProfile={handleSaveProfile}
+                    onAnalyze={() => setCurrentPage('dashboard')}
+                    onLoadSample={handleLoadSample}
+                    isOnboarding={isOnboarding}
+                  />
+                )}
 
-            {currentPage === 'profile' && (
-              <StudentProfilePage
-                profile={profile}
-                onSaveProfile={handleSaveProfile}
-                onAnalyze={() => setCurrentPage('dashboard')}
-                onLoadSample={handleLoadSample}
-                isOnboarding={isOnboarding}
-              />
-            )}
+                {currentPage === 'careers' && (
+                  <CareerSelectionPage
+                    currentRoleId={profile.targetRoleId}
+                    onSelectRole={handleSelectRole}
+                    onAnalyze={() => setCurrentPage('dashboard')}
+                  />
+                )}
 
-            {currentPage === 'careers' && (
-              <CareerSelectionPage
-                currentRoleId={profile.targetRoleId}
-                onSelectRole={handleSelectRole}
-                onAnalyze={() => setCurrentPage('dashboard')}
-              />
-            )}
+                {currentPage === 'dashboard' && (
+                  <DashboardPage
+                    report={report}
+                    profile={profile}
+                    onNavigate={setCurrentPage}
+                  />
+                )}
 
-            {currentPage === 'dashboard' && (
-              <DashboardPage
-                report={report}
-                profile={profile}
-                onNavigate={setCurrentPage}
-              />
-            )}
+                {currentPage === 'analysis' && (
+                  <SkillAnalysisPage
+                    report={report}
+                    onNavigate={setCurrentPage}
+                  />
+                )}
 
-            {currentPage === 'analysis' && (
-              <SkillAnalysisPage
-                report={report}
-                onNavigate={setCurrentPage}
-              />
-            )}
+                {currentPage === 'report' && (
+                  <SkillGapReportPage
+                    report={report}
+                    profile={profile}
+                    onNavigate={setCurrentPage}
+                  />
+                )}
 
-            {currentPage === 'report' && (
-              <SkillGapReportPage
-                report={report}
-                profile={profile}
-                onNavigate={setCurrentPage}
-              />
-            )}
+                {currentPage === 'roadmap' && (
+                  <LearningRoadmapPage
+                    report={report}
+                    onUpdateStatus={handleUpdateStatus}
+                    onNavigate={setCurrentPage}
+                  />
+                )}
 
-            {currentPage === 'roadmap' && (
-              <LearningRoadmapPage
-                report={report}
-                onUpdateStatus={handleUpdateStatus}
-                onNavigate={setCurrentPage}
-              />
-            )}
+                {currentPage === 'projects' && (
+                  <ProjectsPage
+                    report={report}
+                    profile={profile}
+                    onNavigate={setCurrentPage}
+                  />
+                )}
 
-            {currentPage === 'projects' && (
-              <ProjectsPage
-                report={report}
-                profile={profile}
-                onNavigate={setCurrentPage}
-              />
-            )}
+                {currentPage === 'resume' && (
+                  <ResumeAnalysisPage
+                    report={report}
+                    profile={profile}
+                  />
+                )}
 
-            {currentPage === 'resume' && (
-              <ResumeAnalysisPage
-                report={report}
-                profile={profile}
-              />
-            )}
+                {currentPage === 'tracker' && (
+                  <ProgressTrackerPage
+                    report={report}
+                    profile={profile}
+                    onUpdateStatus={handleUpdateStatus}
+                    onNavigate={setCurrentPage}
+                  />
+                )}
 
-            {currentPage === 'tracker' && (
-              <ProgressTrackerPage
-                report={report}
-                profile={profile}
-                onUpdateStatus={handleUpdateStatus}
-                onNavigate={setCurrentPage}
-              />
-            )}
+                {currentPage === 'chat' && (
+                  <AiCareerAssistantPage
+                    report={report}
+                    profile={profile}
+                  />
+                )}
 
-            {currentPage === 'chat' && (
-              <AiCareerAssistantPage
-                report={report}
-                profile={profile}
-              />
-            )}
-
-            {currentPage === 'database' && (
-              <DatabaseSchemaPage
-                profile={profile}
-                report={report}
-              />
-            )}
+                {currentPage === 'database' && (
+                  <DatabaseSchemaPage
+                    profile={profile}
+                    report={report}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </main>
       </div>

@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   Compass,
   User,
@@ -11,20 +12,15 @@ import {
   CheckSquare,
   MessageSquareCode,
   Database,
-  ExternalLink,
-  ChevronRight,
-  LogIn,
-  LogOut
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
-import { User as UserType, StudentProfile, AnalysisReport } from '../../types';
+import { StudentProfile, AnalysisReport } from '../../types';
 
 interface SidebarProps {
   currentPage: string;
   onNavigate: (page: string) => void;
   profile: StudentProfile;
-  currentUser: UserType | null;
-  onLogout: () => void;
-  onOpenAuth: () => void;
   report: AnalysisReport;
   isOpen: boolean;
   onClose: () => void;
@@ -47,9 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   currentPage,
   onNavigate,
   profile,
-  currentUser,
-  onLogout,
-  onOpenAuth,
   report,
   isOpen,
   onClose
@@ -59,7 +52,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       title: 'Overview & Setup',
       items: [
         { id: 'landing', label: 'Landing Page', icon: Compass },
-        { id: 'auth', label: currentUser ? 'Account / Switch' : 'Login / Sign Up', icon: LogIn, badge: currentUser ? 'Active' : undefined },
         { id: 'profile', label: 'Student Profile', icon: User, badge: `${profile.skills.length} skills` },
         { id: 'careers', label: 'Career Roles', icon: Briefcase }
       ]
@@ -79,13 +71,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         { id: 'roadmap', label: 'Learning Roadmap', icon: Milestone },
         { id: 'projects', label: 'Recommended Projects', icon: FolderGit2, badge: `${report.recommendedProjects.length}` },
         { id: 'tracker', label: 'Progress Tracker', icon: CheckSquare },
-        { id: 'chat', label: 'AI Career Assistant', icon: MessageSquareCode, isAi: true }
+        { id: 'chat', label: 'AI Career Assistant', icon: MessageSquareCode, isAi: true, badge: 'AI Coach' }
       ]
     },
     {
       title: 'Architecture',
       items: [
-        { id: 'database', label: 'Relational Database', icon: Database }
+        { id: 'database', label: 'Relational Database', icon: Database, badge: '11 Tables' }
       ]
     }
   ];
@@ -146,9 +138,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                       {item.badge && (
                         <span
-                          className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                          className={`ml-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${
                             isActive
                               ? 'bg-blue-600 text-white'
+                              : item.isAi
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                           }`}
                         >
@@ -164,37 +158,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom Student Context Card */}
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 space-y-2">
-          <div className="flex items-center justify-between px-1">
+        <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40">
+          <div className="p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
             <button
               onClick={() => handleItemClick('profile')}
-              className="text-left flex-1 min-w-0 group"
+              className="w-full text-left group"
             >
-              <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 transition-colors">
-                {currentUser ? currentUser.fullName : profile.fullName || 'Student'}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-600 transition-colors">
+                  {profile.fullName || 'Student'}
+                </span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  {report.readinessScore}% Ready
+                </span>
               </div>
-              <div className="text-[11px] text-blue-600 dark:text-blue-400 truncate font-medium">
-                🎯 {report.roleTitle || 'Role Undecided'}
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                🎯 {report.roleTitle || 'Select Role'}
               </div>
             </button>
 
-            {currentUser ? (
+            <div className="pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
               <button
-                onClick={onLogout}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Log Out"
-                aria-label="Log Out"
+                onClick={() => handleItemClick('profile')}
+                className="text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center gap-1"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <span>Edit Profile</span>
+                <ArrowRight className="w-3 h-3" />
               </button>
-            ) : (
+
               <button
-                onClick={onOpenAuth}
-                className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                onClick={() => handleItemClick('chat')}
+                className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center gap-1"
               >
-                Log In
+                <Sparkles className="w-3 h-3" />
+                <span>Ask AI</span>
               </button>
-            )}
+            </div>
           </div>
         </div>
       </aside>
